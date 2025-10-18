@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: 'maven'
+
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2-
+
+      # Optional but helpful: pre-pull Kafka large image to reduce test flakiness/timeouts
+      - name: Pre-pull Kafka Docker image (optional)
+        run: |
+          docker pull apache/kafka:4.0.1 || true
+        # don't fail the workflow just because pull fails; Testcontainers will still fetch later
+
+      - name: Run tests
+        # -B = batch (less interactive)
+        run: ./mvnw -B test
+        env:
+          MAVEN_OPTS: "-Xmx2g -XX:+UseContainerSupport"
+
+      - name: Upload test results (JUnit XML)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports
+
