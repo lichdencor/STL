@@ -23,23 +23,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      kafka:
-        image: apache/kafka:4.0.1
-        env:
-          KAFKA_CLUSTER_ID: "ci-cluster-1234"
-          KAFKA_NODE_ID: 1
-          KAFKA_PROCESS_ROLES: "broker,controller"
-          KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
-          KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
-          KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-          KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-        options: >-
-          --health-cmd "kafka-broker-api-versions --bootstrap-server kafka:9092 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 60
-
     steps:
       - uses: actions/checkout@v3
 
@@ -58,18 +41,17 @@ jobs:
             sleep 2
           done
 
-      - name: Wait for Kafka
-        run: |
-          echo "Waiting for Kafka..."
-          for i in {1..60}; do
-            nc -z localhost 9092 && break
-            echo "Kafka not ready yet..."
-            sleep 5
-          done
+      - name: Run Kafka KRaft Broker
+        uses: spicyparrot/kafka-kraft-action@v1.1.0
+        with:
+          kafka-version: "4.0.1"   # or 3.7.0 if you want stable
+          kafka-topics: "example,1"
 
       - name: Build with Maven
         run: ./mvnw clean package
 
       - name: Run tests
         run: ./mvnw test
+        env:
+          KAFKA_BOOTSTRAP_SERVERS: ${{ env.kafka_runner_address }}:9093
 
