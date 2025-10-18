@@ -1,0 +1,35 @@
+version: "3.8"
+services:
+  stl-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: stluser
+      POSTGRES_PASSWORD: stlpass
+      POSTGRES_DB: stldb
+    ports:
+      - "5432:5432"
+    volumes:
+      - stldb-data:/var/lib/postgresql/data
+
+  stl-broker:
+    image: bitnami/kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"
+
+volumes:
+  stldb-data:
+

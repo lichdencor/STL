@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: stluser
+          POSTGRES_PASSWORD: stlpass
+          POSTGRES_DB: stldb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stluser -d stldb"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      kafka:
+        image: bitnami/kafka:latest
+        ports:
+          - 9092:9092
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 12
+        uses: actions/setup-java@v3
+        with:
+          java-version: 12
+          distribution: temurin
+
+      - name: Build with Maven
+        run: ./mvnw clean package
+
+      - name: Run tests
+        run: ./mvnw test
+
