@@ -35,10 +35,10 @@ jobs:
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
           KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
         options: >-
-          --health-cmd "kafka-broker-api-versions --bootstrap-server kafka:9092"
+          --health-cmd "kafka-broker-api-versions --bootstrap-server kafka:9092 || exit 1"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 60   # give Kafka ~10 minutes to become healthy
 
     steps:
       - uses: actions/checkout@v3
@@ -61,10 +61,10 @@ jobs:
       - name: Wait for Kafka
         run: |
           echo "Waiting for Kafka..."
-          for i in {1..30}; do
+          for i in {1..60}; do
             nc -z localhost 9092 && break
             echo "Kafka not ready yet..."
-            sleep 2
+            sleep 5
           done
 
       - name: Build with Maven
