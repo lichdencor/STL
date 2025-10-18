@@ -17,8 +17,6 @@ jobs:
           POSTGRES_USER: stluser
           POSTGRES_PASSWORD: stlpass
           POSTGRES_DB: stldb
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U stluser -d stldb"
           --health-interval 10s
@@ -26,17 +24,31 @@ jobs:
           --health-retries 5
 
       kafka:
-        image: bitnami/kafka:latest
-        ports:
-          - 9092:9092
+        image: apache/kafka:4.0.1
+        options: >-
+          --env KAFKA_KRAFT_MODE=true
+          --env KAFKA_LISTENERS=PLAINTEXT://:9092
+          --env KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: 21
           distribution: temurin
+
+      - name: Wait for Postgres
+        run: until pg_isready -h postgres -U stluser; do echo "Waiting for Postgres..."; sleep 5; done
+
+      - name: Wait for Kafka
+        run: |
+          for i in {1..10}; do
+            nc -z kafka 9092 && break
+            echo "Waiting for Kafka..."
+            sleep 5
+          done
 
       - name: Build with Maven
         run: ./mvnw clean package
