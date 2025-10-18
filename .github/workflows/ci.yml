@@ -26,10 +26,12 @@ jobs:
       kafka:
         image: apache/kafka:4.0.1
         env:
-          KAFKA_KRAFT_MODE: "true"
+          KAFKA_CLUSTER_ID: "ci-cluster-1234"
+          KAFKA_NODE_ID: 1
           KAFKA_PROCESS_ROLES: "broker,controller"
           KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
           KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
           KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
         options: >-
           --health-cmd "kafka-broker-api-versions --bootstrap-server kafka:9092"
@@ -50,7 +52,7 @@ jobs:
         run: |
           echo "Waiting for Postgres..."
           for i in {1..30}; do
-            PGPASSWORD=$POSTGRES_PASSWORD pg_isready -h postgres -U stluser -d stldb && break
+            PGPASSWORD=$POSTGRES_PASSWORD pg_isready -h localhost -U stluser -d stldb && break
             echo "Postgres not ready yet..."
             sleep 2
           done
@@ -59,7 +61,7 @@ jobs:
         run: |
           echo "Waiting for Kafka..."
           for i in {1..30}; do
-            nc -z kafka 9092 && break
+            nc -z localhost 9092 && break
             echo "Kafka not ready yet..."
             sleep 2
           done
