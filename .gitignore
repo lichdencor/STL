@@ -34,3 +34,4 @@ build/
 
 ### DOCS ###
 sprint_*
+src/main/resources/jwt-keys/*.pem

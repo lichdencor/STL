@@ -13,6 +13,7 @@ import java.util.UUID;
 
 /**
  * Represents a system user who can participate in transactions.
+ * Enhanced with authentication fields for Sprint 3.
  */
 @Entity
 @Table(name = "users")
@@ -36,6 +37,22 @@ public class User {
   @Column(name = "role")
   private UserRole role;
 
+  // Authentication fields (added in Sprint 3)
+  @Column(name = "password_hash")
+  private String passwordHash;
+
+  @Column(name = "enabled", nullable = false)
+  private Boolean enabled = true;
+
+  @Column(name = "last_login")
+  private OffsetDateTime lastLogin;
+
+  @Column(name = "failed_login_attempts", nullable = false)
+  private Integer failedLoginAttempts = 0;
+
+  @Column(name = "account_locked_until")
+  private OffsetDateTime accountLockedUntil;
+
   @Type(JsonBinaryType.class)
   @Column(name = "metadata", columnDefinition = "jsonb")
   private Map<String, Object> metadata;
@@ -47,6 +64,12 @@ public class User {
   protected void onCreate() {
     if (createdAt == null) {
       createdAt = OffsetDateTime.now();
+    }
+    if (enabled == null) {
+      enabled = true;
+    }
+    if (failedLoginAttempts == null) {
+      failedLoginAttempts = 0;
     }
   }
 
@@ -89,6 +112,46 @@ public class User {
     this.role = role;
   }
 
+  public String getPasswordHash() {
+    return passwordHash;
+  }
+
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
+
+  public Boolean getEnabled() {
+    return enabled;
+  }
+
+  public void setEnabled(Boolean enabled) {
+    this.enabled = enabled;
+  }
+
+  public OffsetDateTime getLastLogin() {
+    return lastLogin;
+  }
+
+  public void setLastLogin(OffsetDateTime lastLogin) {
+    this.lastLogin = lastLogin;
+  }
+
+  public Integer getFailedLoginAttempts() {
+    return failedLoginAttempts;
+  }
+
+  public void setFailedLoginAttempts(Integer failedLoginAttempts) {
+    this.failedLoginAttempts = failedLoginAttempts;
+  }
+
+  public OffsetDateTime getAccountLockedUntil() {
+    return accountLockedUntil;
+  }
+
+  public void setAccountLockedUntil(OffsetDateTime accountLockedUntil) {
+    this.accountLockedUntil = accountLockedUntil;
+  }
+
   public Map<String, Object> getMetadata() {
     return metadata;
   }
@@ -99,6 +162,37 @@ public class User {
 
   public OffsetDateTime getCreatedAt() {
     return createdAt;
+  }
+
+  /**
+   * Checks if account is currently locked.
+   */
+  public boolean isAccountLocked() {
+    if (accountLockedUntil == null) {
+      return false;
+    }
+    return OffsetDateTime.now().isBefore(accountLockedUntil);
+  }
+
+  /**
+   * Records a successful login.
+   */
+  public void recordSuccessfulLogin() {
+    this.lastLogin = OffsetDateTime.now();
+    this.failedLoginAttempts = 0;
+    this.accountLockedUntil = null;
+  }
+
+  /**
+   * Records a failed login attempt.
+   * Locks account after 5 failed attempts for 30 minutes.
+   */
+  public void recordFailedLogin() {
+    this.failedLoginAttempts++;
+
+    if (this.failedLoginAttempts >= 5) {
+      this.accountLockedUntil = OffsetDateTime.now().plusMinutes(30);
+    }
   }
 
   @Override
